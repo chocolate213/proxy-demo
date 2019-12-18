@@ -11,7 +11,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.Arrays;
+import java.util.List;
 
 /**
  * TestDefaultMethodInInterface
@@ -22,24 +22,26 @@ public class TestDefaultMethodInInterface {
 
     @Test
     public void testJdk8DefaultMethodInInterface() {
-
         // 这里不能直接使用 TwitterMapper.class.getInterfaces()，因为代理目标是一个接口，接口没有声明接口，所以使用直接创建 Class 数组的方式
         TwitterMapper o = (TwitterMapper) Proxy.newProxyInstance(TwitterMapper.class.getClassLoader(), new Class[] {TwitterMapper.class}, new Java8InvocationHandler());
 
         String s = o.selectOne(1);
+        List<String> strings = o.selectList();
 
+        Assert.assertEquals(0, strings.size());
         Assert.assertNull(s);
-
-
     }
-//
-//
-//    @Test
-//    public void testJdk9DefaultMethodInInterface() {
-//        TwitterMapper o = (TwitterMapper) Proxy.newProxyInstance(getClass().getClassLoader(), TwitterMapper.class.getInterfaces(), new Java9InvocationHandler());
-//        String s = o.selectOne(1);
-//        Assert.assertNull(s);
-//    }
+
+    @Test
+    public void testJdk9DefaultMethodInInterface() {
+        TwitterMapper o = (TwitterMapper) Proxy.newProxyInstance(getClass().getClassLoader(), new Class[] {TwitterMapper.class}, new Java9InvocationHandler());
+
+        String s = o.selectOne(1);
+        List<String> strings = o.selectList();
+
+        Assert.assertEquals(0, strings.size());
+        Assert.assertNull(s);
+    }
 
     /**
      * JDK 1.8 中 处理接口中的 默认方法：直接执行该方法
@@ -68,23 +70,22 @@ public class TestDefaultMethodInInterface {
 
         }
     }
-//
-//    /**
-//     * JDK 1.9 中，接口中的默认方法：直接执行该方法
-//     */
-//    private static final class Java9InvocationHandler implements InvocationHandler {
-//
-//        @Override
-//        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-//            if (method.isDefault()) {
-//                Class<?> declaringClass = method.getDeclaringClass();
-//                MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(declaringClass, MethodHandles.lookup());
-//                MethodType methodType = MethodType.methodType(method.getReturnType(), method.getParameterTypes());
-//                MethodHandle aStatic = lookup.findSpecial(declaringClass, method.getName(), methodType, declaringClass);
-//                return aStatic.bindTo(proxy).invokeWithArguments(args);
-//            }
-//
-//            return null;
-//        }
-//    }
+
+    /**
+     * JDK 1.9 中，接口中的默认方法：直接执行该方法
+     */
+    private static final class Java9InvocationHandler implements InvocationHandler {
+
+        @Override
+        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+            if (method.isDefault()) {
+                Class<?> declaringClass = method.getDeclaringClass();
+                MethodType methodType = MethodType.methodType(method.getReturnType(), method.getParameterTypes());
+                MethodHandle aStatic = MethodHandles.lookup().findSpecial(declaringClass, method.getName(), methodType, declaringClass);
+                return aStatic.bindTo(proxy).invokeWithArguments(args);
+            }
+
+            return null;
+        }
+    }
 }
