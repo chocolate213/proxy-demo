@@ -81,6 +81,9 @@ public class TestDefaultMethodInInterface {
             if (method.isDefault()) {
                 Class<?> declaringClass = method.getDeclaringClass();
                 MethodType methodType = MethodType.methodType(method.getReturnType(), method.getParameterTypes());
+
+                // Q: 这里为什么要使用 findSpecial
+                // A: 接口中的默认方法 InterfaceMethod 使用字节码指令 invokespecial 进行调用，所以这里要是用 findSpecial（不确定）
                 MethodHandle aStatic = MethodHandles.lookup().findSpecial(declaringClass, method.getName(), methodType, declaringClass);
                 return aStatic.bindTo(proxy).invokeWithArguments(args);
             }
